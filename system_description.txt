@@ -1,0 +1,12 @@
+Design consumption (L/day)
+- Volume drawn every day during period
+
+Non-potable use (y/n, L, [])
+- Whether the system allows non-potable uses
+- Level above which we allow non-potable use
+- Average daily NP volume as fraction of C
+
+Rainwater collection
+- Roof catchment 
+(none, half, whole)
+- Additional catchment
