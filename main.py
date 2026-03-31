@@ -110,5 +110,5 @@ RELIABILITY = Satisfaction(
     True
 )
 
-def evaluate_solution(solution: Solution):
-    
+def evaluate_solution(solution: Design):
+    pass
