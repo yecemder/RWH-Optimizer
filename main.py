@@ -1,8 +1,41 @@
 import random
 from satisfaction_curve import Satisfaction
 from constants import *
+from enum import Enum
+from dataclasses import dataclass
 
-d = GRAVITY * 2
+@dataclass
+class Design:
+    C: float                    # L/day
+    use_nonpotable: bool
+    np_threshold_L: float
+    np_fraction_of_C: float
+
+    roof_choice: str            # "none", "half", "whole"
+    extra_catchment_area_m2: float
+    extra_catchment_x: float
+    extra_catchment_y: float
+    catchment_tank_L: int
+
+    storage_volume_m3: float
+    storage_x: float
+    storage_y: float
+    use_tower: bool
+    tower_height_m: float
+
+    pump: str                   # "A", "B", "C"
+    filter_location: str        # "upstream" or "downstream"
+    filters: tuple              # e.g. ("200um", "5um", "1um")
+
+    uv: str                     # "36W", "40W", "50W"
+    chem: str                   # "chlorine", "ozone"
+
+    power: str                  # "solar" or "diesel"
+    n_batteries: int
+    panel_model: str | None
+    n_panels: int | None
+    use_inverter: bool
+    generator: bool
 
 # Order: weight, min, min_is_req, max, max_is_req, is_increasing
 CONSUMPTION = Satisfaction(
@@ -76,3 +109,6 @@ RELIABILITY = Satisfaction(
     False,
     True
 )
+
+def evaluate_solution(solution: Solution):
+    
