@@ -68,6 +68,8 @@ LOSS_COEFF_TO_STORAGE = 8
 LOSS_COEFF_TO_HOUSE = 12
 
 # Filter constants
+CF_EXP = 12431
+
 FILTER_200UM_INITIAL_COST = 100
 FILTER_200UM_REPLACEMENT_COST = 50
 FILTER_200UM_CF = 0.00417
@@ -128,6 +130,7 @@ PUMP_A_b = -0.3605
 PUMP_A_c = 150.9
 PUMP_A_A = 0.70
 PUMP_A_B = 0.39
+PUMP_A_QMAX = 83.7 # liters per minute
 # Pump B
 PUMP_B_COST = 1250 # $
 PUMP_B_MBTF = 1650 # hours
@@ -136,6 +139,7 @@ PUMP_B_b = -0.096
 PUMP_B_c = 237.86
 PUMP_B_A = 0.94
 PUMP_B_B = 0.85
+PUMP_B_QMAX = 245.7 # liters per minute
 # Pump C
 PUMP_C_COST = 3250 # $
 PUMP_C_MBTF = 1800 # hours
@@ -144,6 +148,7 @@ PUMP_C_b = -0.5516
 PUMP_C_c = 356.8
 PUMP_C_A = 0.72
 PUMP_C_B = 0.55
+PUMP_C_QMAX = 136.5 # liters per minute
 
 PUMP_CONV_G = 15_000 # Conv. factor for velocity to flow rate
 
@@ -180,6 +185,17 @@ DIESEL_ENERGY_CONTENT = 40 # MJ per liter
 DIESEL_HEALTH_RISK = 2
 DIESEL_ENVIRO_RISK = 3
 DIESEL_GHG_PER_LITER = 3.25 # kg CO2e per liter of diesel burned
+
+# Battery constants
+BATTERY_ENERGY_STORAGE = 2000 * 0.0036 # MJ (2 kWh converted to MJ)
+BATTERY_COST = 390 # $
+BATTERY_EFFICIENCY = 0.96 # loses 4% of energy going in and 4% coming out
+BATTERY_GHG = 240 # kg CO2e per battery
+
+# Inverter constants
+INVERTER_COST = 2369 # $
+INVERTER_EFFICIENCY = 0.92
+INVERTER_GHG = 100 # kg CO2e per inverter
 
 # Reference GHG emissions
 GHG_FLAT_EMISSIONS = 2408 # kg CO2e for the pre-existing system AND new system
