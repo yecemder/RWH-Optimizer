@@ -23,6 +23,7 @@ GRAVITY = 9.81  # m/s^2
 DENSITY = 1000  # kg/m^3
 PIPE_DIAMETER = 0.002 # m (2 mm)
 PIPE_FRICTION_FACTOR = 0.05 # Dimensionless
+YEARS_OF_OPERATION = 5
 
 REFERENCE_COST = 110_000    # Cost if all water shipped
 COST_PER_DAY_SHIP = 90      # Cost of shipping per day that consumption is not met
@@ -154,6 +155,7 @@ PUMP_CONV_G = 15_000 # Conv. factor for velocity to flow rate
 
 # Power system constants
 # Solar panels
+SOLAR_INTENSITY = 275 # W/m^2
 MAINTENANCES_PER_YEAR_SOLAR = 4
 # HES-260
 SOLAR_HES_260_AREA = 1.6 # m^2
