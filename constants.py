@@ -203,3 +203,37 @@ INVERTER_GHG = 100 # kg CO2e per inverter
 # Reference GHG emissions
 GHG_FLAT_EMISSIONS = 2408 # kg CO2e for the pre-existing system AND new system
 GHG_TREATMENT_EMISSIONS = 6.5 # kg CO2e / 1000L of water treated for old system
+
+# Optimizer constants
+# Constants for random design generation
+CONSUMPTION_RANGE = (125, 745) # liters per day
+NONPOTABLE_CHANCE = 0.5
+NONPOTABLE_THRESHOLD_RANGE = (50, 500) # liters per day
+NONPOTABLE_PERDAY_RANGE = (0.0, 0.3) # percentage of total consumption that is non-potable
+
+CATCHMENT_CHOICES = ("half", "full", "extra")
+CATCHMENT_CHANCES = (0.05, 0.15, 0.8)
+CATCHMENT_EXTRA_AREA_RANGE = (1, 1000) # m^2
+CATCHMENT_TANK_CAPACITY_CHOICES = (400, 1500, 2500, 5000, 10000) # liters
+
+STORAGE_TANK_CAPACITY_RANGE = (1, 50) # m^3
+XY_PLACEMENT_RANGE = (-20, 100) # m. Both storage tank and extra catchment (if applicable)
+                                # will be placed uniformly at random in this range, but must not be placed inside -20 <= x,y <= 20.
+STORAGE_TOWER_CHANCE = 0.3
+STORAGE_TOWER_HEIGHT_RANGE = (1, 30) # m
+
+PUMP_CHOICES = ("A", "B", "C")
+
+FILTER_LOCATION_CHOICES = ("to tank", "to house")
+FILTER_CHOICES = ("200um", "5um") # 1um is necessary in all cases.
+
+UV_CHOICES = ("36W", "40W", "50W")
+CHEM_CHOICES = ("chlorine", "ozone")
+
+POWER_CHOICES = ("solar", "diesel")
+POWER_CHANCES = (0.5, 0.5)  # Equal for now.
+
+SOLAR_PANEL_MODEL_CHOICES = ("HES_260", "SW_80", "HES_305P")
+SOLAR_PANEL_NUMBER_RANGE = (1, 10)
+# Batteries required to be determined by the simulator.
+# Inverter required only if using solar power.
