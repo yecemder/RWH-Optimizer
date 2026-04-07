@@ -1,48 +1,11 @@
-from satisfaction_curve import Satisfaction
+from satisfaction_curve import *
 from topology import get_height
 
 import random
 from constants import *
 from enum import Enum
 from dataclasses import dataclass, field
-from math import pi, exp
-
-class RoofChoice(Enum):
-    NONE = "none"
-    HALF = "half"
-    WHOLE = "whole"
-
-class FilterLocation(Enum):
-    UPSTREAM = "upstream"
-    DOWNSTREAM = "downstream"
-
-class FilterType(Enum):
-    F200UM = "200um"
-    F5UM = "5um"
-    F1UM = "1um"
-
-class PumpChoice(Enum):
-    A = "A"
-    B = "B"
-    C = "C"
-
-class UVChoice(Enum):
-    W36 = "36W"
-    W40 = "40W"
-    W50 = "50W"
-
-class ChemChoice(Enum):
-    CHLORINE = "chlorine"
-    OZONE = "ozone"
-
-class PowerChoice(Enum):
-    SOLAR = "solar"
-    DIESEL = "diesel"
-
-class SolarPanelModel(Enum):
-    HES_260 = "HES_260"
-    SW_80 = "SW_80"
-    HES_305P = "HES_305P"
+from math import exp
 
 @dataclass
 class Design:
@@ -50,7 +13,7 @@ class Design:
     use_nonpotable: bool
     np_threshold_L: float
 
-    roof_choice: RoofChoice
+    roof_choice: str
     extra_catchment_area_m2: float
     extra_catchment_x: float
     extra_catchment_y: float
@@ -63,16 +26,16 @@ class Design:
     tower_height_m: float
     
 
-    pump: PumpChoice
-    filter_location: FilterLocation
-    filters: tuple              # e.g. (FilterType.F200UM, FilterType.F5UM, FilterType.F1UM)
+    pump: str
+    filter_location: str
+    filters: tuple              # e.g. ("200um", "5um", "1um")
 
-    uv: UVChoice
-    chem: ChemChoice
+    uv: str
+    chem: str
 
-    power: PowerChoice
+    power: str
     n_batteries: int            # Must be > 0 in all cases
-    panel_model: SolarPanelModel | None     # "HES_260", "SW_80", or "HES_305P", or None if not solar
+    panel_model: str | None     # "HES_260", "SW_80", or "HES_305P", or None if not solar
     n_panels: int | None
 
     storage_z: float = 0
@@ -80,91 +43,7 @@ class Design:
     pump_flow_consts: list[float] = field(default_factory=lambda: [0, 0, 0])
     pump_efficiency_consts: list[float] = field(default_factory=lambda: [0, 0, 0])
 
-# Order: weight, min, min_is_req, max, max_is_req, is_increasing
-CONSUMPTION = Satisfaction(
-    CONSUMPTION_WEIGHT,
-    125,
-    True,
-    745,
-    False,
-    True
-)
 
-REL_COST = Satisfaction(
-    RELATIVE_COST_WEIGHT,
-    0.3,
-    False,
-    1.15,
-    True,
-    False
-)
-
-HEALTH_RISK = Satisfaction(
-    HEALTH_RISK_WEIGHT,
-    1,
-    False,
-    24,
-    True,
-    False
-)
-
-GHG_EMISSIONS = Satisfaction(
-    GHG_EMISSIONS_WEIGHT,
-    15,
-    False,
-    110,
-    True,
-    False
-)
-
-MAINTENANCES = Satisfaction(
-    MAINTENANCES_WEIGHT,
-    10,
-    False,
-    60,
-    True,
-    False
-)
-
-NON_POTABLE = Satisfaction(
-    NON_POTABLE_WEIGHT,
-    0,
-    False,
-    0.3,
-    False,
-    True
-)
-
-ON_DEMAND_FLOW = Satisfaction(
-    ON_DEMAND_FLOW_WEIGHT,
-    18,
-    True,
-    100,
-    False,
-    True
-)
-
-RELIABILITY = Satisfaction(
-    RELIABILITY_WEIGHT,
-    200,
-    True,
-    365,
-    False,
-    True
-)
-
-def evaluate_solution(solution: Design):
-    results = run_simulation(solution)
-    return {
-        "consumption": CONSUMPTION.calculate_weighted_satisfaction(results["consumption"]),
-        "relative_cost": REL_COST.calculate_weighted_satisfaction(results["relative_cost"]),
-        "health_risk": HEALTH_RISK.calculate_weighted_satisfaction(results["health_risk"]),
-        "ghg_emissions": GHG_EMISSIONS.calculate_weighted_satisfaction(results["ghg_emissions"]),
-        "maintenances": MAINTENANCES.calculate_weighted_satisfaction(results["maintenances"]),
-        "non_potable": NON_POTABLE.calculate_weighted_satisfaction(results["non_potable"]),
-        "on_demand_flow": ON_DEMAND_FLOW.calculate_weighted_satisfaction(results["on_demand_flow"]),
-        "reliability": RELIABILITY.calculate_weighted_satisfaction(results["reliability"])
-    }
 
 def get_rainfall_data():
     # Random data for now. 5 years of daily rainfall data (in mm)
@@ -294,13 +173,6 @@ def calculate_flow_rate_up(solution: Design):
     Q = max(Q1, Q2)
     return Q
 
-def daily_ozone_energy(solution, daily_water_L):
-    if solution.chem == "ozone":
-        # Ozone energy is water liters * ozone mg per liter * ozone energy per mg
-        return [water * 0.5 for water in daily_water_L]
-    else:
-        return [0] * len(daily_water_L)
-
 def daily_uv_energy(solution, daily_water_L):
     uv_choice = solution.uv
     if uv_choice in ("36W", "40W", "50W"):
@@ -397,47 +269,3 @@ def calculate_diesel_data(daily_energy_MJ, solution):
         return sum(diesel_needs), maintenance_events
     else:
         return 0, [0] * len(daily_energy_MJ)
-
-def calculate_solar_data(daily_energy_MJ, solution):
-    if solution.power == "solar":
-        # For solar, we can calculate the number of batteries needed to store excess energy and the number of maintenances from that
-        daily_solar_energy_MJ = daily_solar_energy(solution, [0] * len(daily_energy_MJ)) # Get daily solar energy without considering water needs
-        excess_energy_MJ = [max(0, solar - sum(energy)) for solar, energy in zip(daily_solar_energy_MJ, daily_energy_MJ)]
-        total_excess_energy_MJ = sum(excess_energy_MJ)
-        n_batteries_needed = total_excess_energy_MJ / (BATTERY_ENERGY_STORAGE * BATTERY_EFFICIENCY**2)
-        return n_batteries_needed
-    else:
-        return 0, 0
-
-# Find a way to make a better test case
-results = evaluate_solution(Design(
-    C=500,
-    use_nonpotable=True,
-    np_threshold_L=100,
-    ## np_fraction_of_C=0.2,
-    roof_choice=RoofChoice.HALF,
-    extra_catchment_area_m2=50,
-    extra_catchment_x=0.5,
-    extra_catchment_y=0.5,
-    catchment_tank_L=1000,
-    storage_volume_m3=10,
-    storage_x=0.5,
-    storage_y=0.5,
-    use_tower=True,
-    tower_height_m=5,
-    pump=PumpChoice.B,
-    filter_location=FilterLocation.UPSTREAM,
-    filters=(FilterType.F200UM, FilterType.F5UM, FilterType.F1UM),
-    uv=UVChoice.W40,
-    chem=ChemChoice.CHLORINE,
-    power=PowerChoice.SOLAR,
-    n_batteries=4,
-    panel_model=SolarPanelModel.HES_260,
-    n_panels=10
-))
-
-print(results)
-print(list(results.values()))
-print("sats:", str(sum(i for i in list(results.values()) if i is not None)))
-# For rainwater data, we'll randomly generate values.
-# In a real implementation, this would be based on historical data for the location.
