@@ -103,7 +103,8 @@ def random_designs(n: int) -> list[Design]:
 def find_best_random_design(n: int):
     pass
 
-print("Generating random design...")
-design = random_design()
-time_function(random_designs, 100, iters=100)
-#print_design(design)
+if __name__ == "__main__":
+    print("Generating random design...")
+    design = random_design()
+    time_function(random_designs, 100, iters=100)
+    #print_design(design)
