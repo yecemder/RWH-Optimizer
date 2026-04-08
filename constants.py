@@ -1,3 +1,5 @@
+from math import pi, cos, exp
+
 # Satisfaction weights for each criterion (these can be adjusted based on importance)
 # H weight: 16-25%
 # M weight: 10-15%
@@ -24,6 +26,9 @@ DENSITY = 1000  # kg/m^3
 PIPE_DIAMETER = 0.002 # m (2 mm)
 PIPE_FRICTION_FACTOR = 0.05 # Dimensionless
 YEARS_OF_OPERATION = 5
+DAYS_OF_OPERATION = YEARS_OF_OPERATION * 365
+
+DAYS_WITH_NO_CONSUMPTION = 30  # No water is consumed for this first number of days
 
 REFERENCE_COST = 110_000    # Cost if all water shipped
 COST_PER_DAY_SHIP = 90      # Cost of shipping per day that consumption is not met

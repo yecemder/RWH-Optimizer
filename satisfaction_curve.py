@@ -1,4 +1,3 @@
-from math import cos, pi
 from constants import *
 
 class Satisfaction:

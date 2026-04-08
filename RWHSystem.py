@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 @dataclass
 class Design:
@@ -22,7 +22,7 @@ class Design:
 
     pump: str # "A", "B", or "C"
     filter_location: str  # "to storage" or "to house"
-    filters: tuple              # e.g. ("200um", "5um", "1um")
+    filters: tuple        # e.g. ("200um", "5um", "1um"). Must include 1um
 
     uv: str # "36W", "40W", or "50W"
     chem: str # "chlorine" or "ozone"

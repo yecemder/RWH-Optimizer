@@ -1,4 +1,3 @@
-
 import random
 from RWHSystem import Design
 import topology
@@ -106,5 +105,5 @@ def find_best_random_design(n: int):
 if __name__ == "__main__":
     print("Generating random design...")
     design = random_design()
-    time_function(random_designs, 100, iters=100)
+    time_function(random_design, iters=100)
     #print_design(design)

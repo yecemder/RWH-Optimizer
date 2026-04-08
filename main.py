@@ -2,10 +2,8 @@ from satisfaction_curve import *
 from topology import get_height
 
 import random
-from constants import *
 from enum import Enum
 from dataclasses import dataclass, field
-from math import exp
 
 @dataclass
 class Design:
@@ -24,7 +22,6 @@ class Design:
     storage_y: float
     use_tower: bool
     tower_height_m: float
-    
 
     pump: str
     filter_location: str
@@ -42,20 +39,6 @@ class Design:
     pipe_length: float = 0
     pump_flow_consts: list[float] = field(default_factory=lambda: [0, 0, 0])
     pump_efficiency_consts: list[float] = field(default_factory=lambda: [0, 0, 0])
-
-
-
-def get_rainfall_data():
-    # Random data for now. 5 years of daily rainfall data (in mm)
-    rainfall_data = []
-    for day in range(365*5):
-        # Simulate seasonal rainfall patterns with some randomness
-        if 60 <= day % 365 <= 150:  # Rainy season
-            rainfall = random.uniform(5, 20)  # mm/day
-        else:  # Dry season
-            rainfall = random.uniform(0, 10)  # mm/day
-        rainfall_data.append(rainfall)
-    return rainfall_data
 
 def build_results_dict(solution: Design):
     return {
@@ -135,43 +118,7 @@ def water_collected(rainfall_data, solution: Design):
 
     return final_collected, losses
 
-def calculate_flow_rate_up(solution: Design):
-    # Flow rate up to the tower from the catchment tank in L/s.
-    filter_consts = 0
-    if solution.filter_location == "upstream":
-        for f in solution.filters:
-            if f == "200um":
-                filter_consts += FILTER_200UM_CF
-            elif f == "5um":
-                filter_consts += FILTER_5UM_CF
-            elif f == "1um":
-                filter_consts += FILTER_1UM_CF
-    
-    cf_total = filter_consts * CF_EXP
-    
-    W = ( 
-        DENSITY 
-        * (PIPE_FRICTION_FACTOR * solution.pipe_length / PIPE_DIAMETER + LOSS_COEFF_TO_STORAGE)
-        / (2000 * PUMP_CONV_G**2 * PIPE_DIAMETER**4 * pi**2)
-        - solution.pump_flow_consts[0]
-    )
-    X = (
-        cf_total
-        / (1000 * PUMP_CONV_G * pi * PIPE_DIAMETER**2)
-        - solution.pump_flow_consts[1]
-    )
-    Y = (
-        DENSITY * GRAVITY * (solution.storage_z + WATER_HEIGHT_PUMPING)
-        / (1000)
-        - solution.pump_flow_consts[2]
-    )
-    Q1 = (-X + (X**2 - 4*W*Y)**0.5) / (2*W)
-    Q2 = (-X - (X**2 - 4*W*Y)**0.5) / (2*W)
-    if (isinstance(Q1, complex)): # Only need to check one since if one is complex, the other will be too
-        raise ValueError("Storage is too high for pump.")
-    
-    Q = max(Q1, Q2)
-    return Q
+
 
 def daily_uv_energy(solution, daily_water_L):
     uv_choice = solution.uv
@@ -189,23 +136,6 @@ def pump_efficiency_from_flow_rate(flow_rate, solution):
             - 1.72 * (flow_rate / solution.pump_efficiency_consts[2])**4 # - 1.72(Q/Qmax)^4 
         )** solution.pump_efficiency_consts[1] # ^B
     )
-
-def daily_hours_of_sunlight():
-    # Gives back daily hours of sunlight for 5 years.
-    return (
-        [8.50]  * 31 + # January
-        [10.0]  * 28 + # February
-        [11.8]  * 31 + # March
-        [13.6]  * 30 + # April
-        [15.3]  * 31 + # May
-        [16.0]  * 30 + # June
-        [15.75] * 31 + # July
-        [14.2]  * 31 + # August
-        [12.5]  * 30 + # September
-        [10.75] * 31 + # October
-        [9.0]   * 30 + # November
-        [8.25]  * 31 # December
-    ) * YEARS_OF_OPERATION
 
 def daily_solar_energy(solution, daily_water_L):
     if (
