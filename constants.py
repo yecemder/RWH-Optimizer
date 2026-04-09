@@ -91,9 +91,9 @@ FILTER_1UM_INITIAL_COST = 125
 FILTER_1UM_REPLACEMENT_COST = 75
 FILTER_1UM_CF = 0.167
 
-FILTER_FOUL_200UM_NOPREV = 5_000 # 5k liters before fouled without pre-filters
+FILTER_FOUL_200UM_NOPREV = 25_000 # 5k liters before fouled without pre-filters
 FILTER_FOUL_5UM_NOPREV = 10_000 # 10k liters before fouled without pre-filters
-FILTER_FOUL_1UM_NOPREV = 25_000 # 25k liters before fouled without pre-filters
+FILTER_FOUL_1UM_NOPREV = 5_000 # 25k liters before fouled without pre-filters
 
 FILTER_FOUL_5UM_200PREV = 20_000 # 20k liters before fouled with 200um pre-filter
 FILTER_FOUL_1UM_200PREV = 15_000 # 15k liters before fouled with 200um pre-filter
@@ -201,7 +201,7 @@ DIESEL_ENVIRO_RISK = 3
 DIESEL_GHG_PER_LITER = 3.25 # kg CO2e per liter of diesel burned
 
 # Battery constants
-BATTERY_ENERGY_STORAGE = 2000 * 0.0036 # MJ (2 kWh converted to MJ)
+BATTERY_ENERGY_STORAGE = 2000 * 0.0036 # MJ (2000 Wh converted to MJ)
 BATTERY_COST = 390 # $
 BATTERY_EFFICIENCY = 0.96 # loses 4% of energy going in and 4% coming out
 BATTERY_GHG = 240 # kg CO2e per battery
