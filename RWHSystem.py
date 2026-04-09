@@ -3,9 +3,8 @@ from dataclasses import dataclass
 @dataclass
 class Design:
     C: float                    # L/day
-    use_nonpotable: bool
+    
     np_threshold_L: float | None
-    np_daily_frac_C: float | None
 
     roof_choice: str
     extra_catchment_area_m2: float | None
@@ -16,7 +15,6 @@ class Design:
     storage_volume_m3: float
     storage_x: float
     storage_y: float
-    use_tower: bool
     tower_height_m: float | None
     
 
@@ -28,7 +26,7 @@ class Design:
     chem: str # "chlorine" or "ozone"
 
     power: str  # "diesel" or "solar"
-    n_batteries: int | None             # Must be > 0 in all cases. If diesel, exactly 1. If solar, optimize? or choose random?
+    n_batteries: int            # Must be > 0 in all cases. If diesel, exactly 1. If solar, random.
     
     panel_model: str | None     # "HES_260", "SW_80", or "HES_305P", or None if not solar
     n_panels: int | None

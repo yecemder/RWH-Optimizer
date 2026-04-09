@@ -8,9 +8,7 @@ from utils import print_design, time_function
 def random_design() -> Design:
     consumption = random.randint(*CONSUMPTION_RANGE)
     
-    use_nonpotable = random.random() < NONPOTABLE_CHANCE
-    nonpotable_threshold = random.randint(*NONPOTABLE_THRESHOLD_RANGE) if use_nonpotable else 0
-    nonpotable_perday = random.uniform(*NONPOTABLE_PERDAY_RANGE) if use_nonpotable else 0.0
+    nonpotable_threshold = random.randint(*NONPOTABLE_THRESHOLD_RANGE) if random.random() < NONPOTABLE_CHANCE else None
     
     catchment = random.choices(CATCHMENT_CHOICES, CATCHMENT_CHANCES)[0]
     catchment_extra_area = random.randint(*CATCHMENT_EXTRA_AREA_RANGE) if catchment == "extra" else None
@@ -36,8 +34,7 @@ def random_design() -> Design:
         storage_tank_x = random.randint(*XY_PLACEMENT_RANGE)
         storage_tank_y = random.randint(*XY_PLACEMENT_RANGE)
 
-    storage_tower = random.random() < STORAGE_TOWER_CHANCE
-    storage_tower_height = random.randint(*STORAGE_TOWER_HEIGHT_RANGE) if storage_tower else None
+    storage_tower_height = random.randint(*STORAGE_TOWER_HEIGHT_RANGE) if random.random() < STORAGE_TOWER_CHANCE else None
     
     pump = random.choice(PUMP_CHOICES)
     filter_location = random.choice(FILTER_LOCATION_CHOICES)
@@ -48,7 +45,8 @@ def random_design() -> Design:
     power_type = random.choices(POWER_CHOICES, POWER_CHANCES)[0]
     solar_panel_model = random.choice(SOLAR_PANEL_MODEL_CHOICES) if power_type == "solar" else None
     solar_panel_number = random.randint(*SOLAR_PANEL_NUMBER_RANGE) if power_type == "solar" else None
-
+    n_batteries = 1 if power_type == "diesel" else random.randint(*BATTERY_NUMBER_RANGE)
+        
     # Calculate derived attributes.
     storage_z = topology.get_height(storage_tank_x, storage_tank_y) + (storage_tower_height if storage_tower_height is not None else 0)
     storage_pipe_length = topology.get_pipe_length(storage_tank_x, storage_tank_y, z_offset=storage_z)
@@ -67,9 +65,7 @@ def random_design() -> Design:
     
     return Design(
         C=consumption,
-        use_nonpotable=use_nonpotable,
         np_threshold_L=nonpotable_threshold,
-        np_daily_frac_C=nonpotable_perday,
         roof_choice=catchment,
         extra_catchment_area_m2=catchment_extra_area,
         extra_catchment_x=catchment_extra_x,
@@ -78,7 +74,6 @@ def random_design() -> Design:
         storage_volume_m3=storage_tank_capacity,
         storage_x=storage_tank_x,
         storage_y=storage_tank_y,
-        use_tower=storage_tower,
         tower_height_m=storage_tower_height,
         pump=pump,
         filter_location=filter_location,
@@ -86,7 +81,7 @@ def random_design() -> Design:
         uv=uv_type,
         chem=chem_type,
         power=power_type,
-        n_batteries=None, # to be determined by simulator
+        n_batteries=n_batteries,
         panel_model=solar_panel_model,
         n_panels=solar_panel_number,
         storage_z=storage_z,
@@ -106,4 +101,4 @@ if __name__ == "__main__":
     print("Generating random design...")
     design = random_design()
     time_function(random_design, iters=100)
-    #print_design(design)
+    print_design(design)

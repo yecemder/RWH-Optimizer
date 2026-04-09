@@ -28,7 +28,7 @@ PIPE_FRICTION_FACTOR = 0.05 # Dimensionless
 YEARS_OF_OPERATION = 5
 DAYS_OF_OPERATION = YEARS_OF_OPERATION * 365
 
-DAYS_WITH_NO_CONSUMPTION = 30  # No water is consumed for this first number of days
+DAYS_WITH_NO_CONSUMPTION = 31  # No water is consumed for this first number of days
 
 REFERENCE_COST = 110_000    # Cost if all water shipped
 COST_PER_DAY_SHIP = 90      # Cost of shipping per day that consumption is not met
@@ -64,6 +64,7 @@ WATER_HEIGHT_PUMPING = 1.5 # m (assumed added height difference when pumping)
 WATER_HEIGHT_SUPPLYING = 0 # m (assumed height difference when supplying water to the house)
 
 WATER_LEVEL_SENSOR_COST = 250 # $ per sensor
+MAX_NONPOTABLE_FRACTION = 0.3 # Maximum fraction of total consumption that can be non-potable
 
 # Cost of a tower is A(V[m^3]^1.6) + B(h[m]^1.8)
 TOWER_COST_A = 25 # $ per m^3 of volume
