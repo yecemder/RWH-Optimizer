@@ -51,7 +51,7 @@ def random_design() -> Design:
         
     # Calculate derived attributes.
     storage_z = topology.get_height(storage_tank_x, storage_tank_y) + (storage_tower_height if storage_tower_height is not None else 0)
-    storage_pipe_length = topology.get_pipe_length(storage_tank_x, storage_tank_y, z_offset=storage_z)
+    storage_pipe_length = topology.get_pipe_length(storage_tank_x, storage_tank_y, z_offset=(storage_tower_height or 0))
     catchment_pipe_length = topology.get_pipe_length(catchment_extra_x, catchment_extra_y, z_offset=0.0) if catchment_extra_x is not None and catchment_extra_y is not None else None
 
     match pump:
