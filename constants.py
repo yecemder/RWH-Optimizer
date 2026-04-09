@@ -1,3 +1,5 @@
+from math import pi, cos, exp
+from rich import print
 # Satisfaction weights for each criterion (these can be adjusted based on importance)
 # H weight: 16-25%
 # M weight: 10-15%
@@ -21,9 +23,12 @@ assert abs(sum_weights - 1.0) < 1e-6, f"Weights must sum to 1.0, but they sum to
 # ---------------------------------
 GRAVITY = 9.81  # m/s^2
 DENSITY = 1000  # kg/m^3
-PIPE_DIAMETER = 0.002 # m (2 mm)
+PIPE_DIAMETER = 0.02 # m (20 mm)
 PIPE_FRICTION_FACTOR = 0.05 # Dimensionless
 YEARS_OF_OPERATION = 5
+DAYS_OF_OPERATION = YEARS_OF_OPERATION * 365
+
+DAYS_WITH_NO_CONSUMPTION = 31  # No water is consumed for this first number of days
 
 REFERENCE_COST = 110_000    # Cost if all water shipped
 COST_PER_DAY_SHIP = 90      # Cost of shipping per day that consumption is not met
@@ -33,6 +38,8 @@ HALF_ROOF_CATCHMENT_AREA = 50 # m^2
 HALF_ROOF_CATCHMENT_COST = 150 # $
 FULL_ROOF_CATCHMENT_AREA = 100 # m^2
 FULL_ROOF_CATCHMENT_COST = 350 # $
+EXTRA_CATCHMENT_FLAT_COST = 500 # $ for having any extra catchment area at all, regardless of size
+EXTRA_CATCHMENT_COST_PER_M2 = 10 # $ per m^2 of extra catchment area
 
 # Tank constants
 TANK_1_CAPACITY = 400 # liters
@@ -57,6 +64,7 @@ WATER_HEIGHT_PUMPING = 1.5 # m (assumed added height difference when pumping)
 WATER_HEIGHT_SUPPLYING = 0 # m (assumed height difference when supplying water to the house)
 
 WATER_LEVEL_SENSOR_COST = 250 # $ per sensor
+MAX_NONPOTABLE_FRACTION = 0.3 # Maximum fraction of total consumption that can be non-potable
 
 # Cost of a tower is A(V[m^3]^1.6) + B(h[m]^1.8)
 TOWER_COST_A = 25 # $ per m^3 of volume
@@ -85,20 +93,20 @@ FILTER_1UM_CF = 0.167
 
 FILTER_FOUL_200UM_NOPREV = 5_000 # 5k liters before fouled without pre-filters
 FILTER_FOUL_5UM_NOPREV = 10_000 # 10k liters before fouled without pre-filters
-FILTER_FOUL_1UM_NOPREV = 25_000 # 20k liters before fouled without pre-filters
+FILTER_FOUL_1UM_NOPREV = 25_000 # 25k liters before fouled without pre-filters
 
 FILTER_FOUL_5UM_200PREV = 20_000 # 20k liters before fouled with 200um pre-filter
 FILTER_FOUL_1UM_200PREV = 15_000 # 15k liters before fouled with 200um pre-filter
 
-FILTER_FOUL_1UM_5PREV = 20_000 # 10k liters before fouled with 5um pre-filter
+FILTER_FOUL_1UM_5PREV = 20_000 # 20k liters before fouled with 5um pre-filter
 
 # Chemical treatment constants
 # Chlorine
-CHLORINE_USED_PER_LITER = 10 # mg/L
+CHLORINE_MG_USED_PER_LITER = 10 # mg/L
 CHLORINE_DOSER_COST = 700 # $
 CHLORINE_CONTAINER_SIZE = 4400 # grams (4.4 kg)
 CHLORINE_CONTAINER_COST = 100 # $
-CHLORINE_CONCENTRATION = 0.08
+CHLORINE_CONCENTRATION = 0.08 # 8% concentration w/w
 CHLORINE_HEALTH_RISK = 4
 CHLORINE_ENVIRO_RISK = 3
 
@@ -113,14 +121,17 @@ UV_BULB_MTBF = 1 # year
 UV_36W_COST = 500 # $
 UV_36W_REPLACEMENT_COST = 60 # $
 UV_36W_ENERGY_CONSUMPTION = 36 # W
+UV_36W_MAX_FLOW_RATE = 25 # liters per minute
 # 40W system
 UV_40W_COST = 600 # $
 UV_40W_REPLACEMENT_COST = 80 # $
 UV_40W_ENERGY_CONSUMPTION = 40 # W
+UV_40W_MAX_FLOW_RATE = 35 # liters per minute
 # 50W system
 UV_50W_COST = 850 # $
 UV_50W_REPLACEMENT_COST = 110 # $
 UV_50W_ENERGY_CONSUMPTION = 50 # W
+UV_50W_MAX_FLOW_RATE = 40 # liters per minute
 
 # Pumps
 # Pump A
@@ -203,3 +214,39 @@ INVERTER_GHG = 100 # kg CO2e per inverter
 # Reference GHG emissions
 GHG_FLAT_EMISSIONS = 2408 # kg CO2e for the pre-existing system AND new system
 GHG_TREATMENT_EMISSIONS = 6.5 # kg CO2e / 1000L of water treated for old system
+
+# Optimizer constants
+# Constants for random design generation
+CONSUMPTION_RANGE = (125, 745) # liters per day
+NONPOTABLE_CHANCE = 0.5
+NONPOTABLE_THRESHOLD_RANGE = (100, 500) # liters
+NONPOTABLE_PERDAY_RANGE = (0.1, 0.3) # percentage of total consumption that is non-potable
+
+CATCHMENT_CHOICES = ("half", "full", "extra")
+CATCHMENT_CHANCES = (0.05, 0.15, 0.8)
+CATCHMENT_EXTRA_AREA_RANGE = (1, 200) # m^2
+CATCHMENT_TANK_CAPACITY_CHOICES = (400, 1500, 2500, 5000, 10000) # liters
+
+STORAGE_TANK_CAPACITY_RANGE = (1, 50) # m^3
+XY_PLACEMENT_RANGE = (-20, 100) # m. Both storage tank and extra catchment (if applicable)
+                                # will be placed uniformly at random in this range, but must not be placed inside -20 <= x,y <= 20.
+STORAGE_TOWER_CHANCE = 0.5
+STORAGE_TOWER_HEIGHT_RANGE = (1, 20) # m
+
+PUMP_CHOICES = ("A", "B", "C")
+
+FILTER_LOCATION_CHOICES = ("to storage", "to house")
+FILTER_CHOICES = ("200um", "5um") # 1um is necessary in all cases.
+
+UV_CHOICES = ("36W", "40W", "50W")
+CHEM_CHOICES = ("chlorine", "ozone")
+
+POWER_CHOICES = ("solar", "diesel")
+POWER_CHANCES = (0.5, 0.5)  # Equal for now.
+
+SOLAR_PANEL_MODEL_CHOICES = ("HES_260", "SW_80", "HES_305P")
+SOLAR_PANEL_NUMBER_RANGE = (1, 10)
+
+BATTERY_NUMBER_RANGE = (1, 10) # Only applicable if power is solar. If power is diesel, must be 1.
+
+# Inverter required only if using solar power.

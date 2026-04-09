@@ -166,26 +166,40 @@ class TopoMap:
 
 
 @lru_cache(maxsize=1)
-def load_topo_map(image_path: str) -> TopoMap:
+def load_topo_map(image_path: str = "HOUSE_TOPOLOGY.jpg") -> TopoMap:
     """
     Load and cache the topo map exactly once.
     """
     return TopoMap(image_path=image_path)
 
 
-def get_height(x: float, y: float, image_path: str = "HOUSE_TOPOLOGY.jpg") -> float:
+def get_height(x: float, y: float, image_path: str = "HOUSE_TOPOLOGY.jpg") -> int:
     """
     Convenience function: cached one-time load, then fast lookup.
     """
     topo = load_topo_map(image_path)
     return ceil(topo.height(x, y) + 0.6)  # round up to nearest integer, with a small fudge factor to ensure we err on the side of safety
 
+def get_pipe_length(x: float, y: float, z_offset: float = 0.0, image_path: str = "HOUSE_TOPOLOGY.jpg") -> float:
+    """
+    Convenience function to get the pipe length from (x, y) to the house at (0, 0).
+    Uses the cached topo map for height lookup.
+    """
+    topo = load_topo_map(image_path)
+    z = topo.height(x, y)
+    horizontal_dist = (x**2 + y**2)**0.5
+    total_length = (horizontal_dist**2 + (z + z_offset)**2)**0.5
+    return float(total_length)
+
 TOPOLOGY_IMG_PATH = "HOUSE_TOPOLOGY.jpg"
 
 if __name__ == "__main__":
     # Test some points and print their heights.
-    print(get_height(-10,17, TOPOLOGY_IMG_PATH))
-    print(get_height(30, 80, TOPOLOGY_IMG_PATH))
-    print(get_height(20, 0, TOPOLOGY_IMG_PATH))
-    print(get_height(80, 80, TOPOLOGY_IMG_PATH))
-    print(get_height(40, 60, TOPOLOGY_IMG_PATH))
+    print(get_height(-10,17))
+    print(get_height(30, 80))
+    print(get_height(20, 0))
+    print(get_height(80, 80))
+    print(get_height(40, 60))
+    print(get_pipe_length(20, 0))
+    print(get_pipe_length(80, 80))
+    print(get_pipe_length(40, 60))
