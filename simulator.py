@@ -1,6 +1,6 @@
 from constants import *
 from RWHSystem import Design
-from utils import print_design, likelihood_rating_from_days
+from math import log
 
 def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data: list[float]) -> dict[str, float] | None:
     # Rainfall data in mm/day. Sunlight data in hours/day.
@@ -31,13 +31,11 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
     # Calculate system constants.
     to_storage_consts = calculate_consts_to_storage(solution)  # Check constants on the way to storage.
     if to_storage_consts is None:
-        print("System fails due to inability to pump water to storage.")
         return None  # System won't work if these values are invalid.
     
     flow_rate_up, pressure_up = to_storage_consts  # L/min and kPa respectively.
     flow_rate_down = calculate_flow_rate_to_house(solution)  # Flow rate down to the house from the tower in L/min.
     if flow_rate_down is None:
-        print("System fails due to inadequate flow rate to house.")
         return None  # System won't work if the storage height < 0.
     pump_efficiency = pump_efficiency_from_flow_rate(flow_rate_up, solution)  # Efficiency of the pump at the given flow rate.
     
@@ -159,7 +157,6 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
             else:
                 # Otherwise, refuel and then use diesel.
                 if (diesel_needed_L - diesel_level) > GENERATOR_DIESEL_CAPACITY:
-                    print("System fails due to inability to pump water to storage from insufficient diesel capacity.")
                     return None  # System won't work if we can't store enough diesel to meet pumping needs.
                 diesel_maintenances += 1
                 maintenance_operations += 1
@@ -216,9 +213,7 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
         if solution.filter_location == "to storage":
             filter_use_today = volume_pumped_m3 * 1000  # Convert m^3 to L for filter usage tracking.
             for i, f in enumerate(solution.filters):
-                print(f"Filter {f} usage today: {filter_use_today} L. Total usage: {filter_usage[i]} L. MBTF: {filter_mbtf[i]} L.")
                 if filter_use_today + filter_usage[i] >= filter_mbtf[i]:
-                    print("Replaced a filter")
                     filter_replacement_maintenance = True
                     # Reset usage after replacement.
                     filter_usage[i] = filter_use_today
@@ -234,9 +229,7 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
         elif solution.filter_location == "to house":
             filter_use_today = consumption  # L. Non-potable skips any filters on the way back.
             for i, f in enumerate(solution.filters):
-                print(f"Filter {f} usage today: {filter_use_today} L. Total usage: {filter_usage[i]} L. MBTF: {filter_mbtf[i]} L.")
                 if filter_use_today + filter_usage[i] >= filter_mbtf[i]:
-                    print("Replaced a filter")
                     filter_replacement_maintenance = True
                     # Reset usage after replacement.
                     filter_usage[i] = filter_use_today
@@ -266,17 +259,6 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
     maintenance_operations /= YEARS_OF_OPERATION  # Average number of maintenance operations per year.
     non_potable_avg = nonpotable_used_total / (DAYS_OF_OPERATION * solution.C) if solution.C != 0 else 0.0
     on_demand_flow_rate = flow_rate_down  # L/min, which is the flow rate available to the house when water is being supplied.
-    
-    print("--- All variable tallies ---")
-    print(f"Total cost: ${cost:.2f}")
-    print(f"Relative cost (compared to all-water-shipped): {relative_cost:.2f}")
-    print(f"Reliability (days with water supplied): {reliability}")
-    print(f"Risk exposure score: {risk_exposure:.2f}")
-    print(f"Relative GHG emissions (compared to all-water-shipped): {relative_ghg:.2f}")
-    print(f"Average maintenance operations per year: {maintenance_operations:.2f}")
-    print(f"Average non-potable water fraction of consumption: {non_potable_avg:.2%}")
-    print(f"On-demand flow rate to house: {on_demand_flow_rate:.2f} L/min")
-    
 
     return {
         "consumption": solution.C,
@@ -484,7 +466,6 @@ def calculate_static_costs(solution: Design):
         cost += INVERTER_COST
     elif solution.power == "diesel":
         cost += GENERATOR_COST + DIESEL_COST_PER_REFUEL
-    print(f"Static costs for design: ${cost:.2f}")
     return cost
 
 def calculate_relative_ghg_emissions(solution: Design, diesel_used_L: float, water_consumed_L: float):
@@ -518,6 +499,10 @@ def calculate_relative_ghg_emissions(solution: Design, diesel_used_L: float, wat
     
     relative_emissions = total_emissions_kg / nonRWH_CO2
     return relative_emissions
+
+def likelihood_rating_from_days(event_days_yearly: float) -> float:
+    period_between_events = 365 / event_days_yearly
+    return 4 - 0.5*log(period_between_events)
 
 def calculate_risk_exposure(total_diesel_refills: int, total_chlorine_refills: int):
     # Likelihood rating is calculated from a yearly average.
