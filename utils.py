@@ -1,13 +1,14 @@
 from RWHSystem import Design
+from math import log
 
 from time import perf_counter_ns as timer
 
 def print_design(design: Design):
     print(f"Consumption: {design.C} L/day")
-    print(f"Use non-potable water: {design.use_nonpotable}")
-    if design.use_nonpotable:
+    if design.np_threshold_L is not None:
+        print(f"Use non-potable water: {design.np_threshold_L is not None}")
         print(f"  Non-potable threshold: {design.np_threshold_L} L/day")
-        print(f"  Non-potable daily fraction: {design.np_daily_frac_C:.2%}")
+        # print(f"  Non-potable daily fraction: {design.np_daily_frac_C:.2%}")
     print(f"Roof choice: {design.roof_choice}")
     if design.roof_choice == "extra":
         print(f"  Extra catchment area: {design.extra_catchment_area_m2} m^2")
@@ -15,9 +16,8 @@ def print_design(design: Design):
     print(f"Catchment tank capacity: {design.catchment_tank_L} L")
     print(f"Storage volume: {design.storage_volume_m3} m^3")
     print(f"Storage location: ({design.storage_x}, {design.storage_y})")
-    print(f"Use storage tower: {design.use_tower}")
-    if design.use_tower:
-        print(f"  Tower height: {design.tower_height_m} m")
+    if design.tower_height_m is not None:
+        print(f"  Uses storage tower: {design.tower_height_m} m")
     print(f"Pump choice: {design.pump}")
     print(f"Filter location: {design.filter_location}")
     print(f"Filters: {', '.join(design.filters)}")
@@ -36,6 +36,10 @@ def print_design(design: Design):
 
 def sgn(x):
     return (x > 0) - (x < 0)
+
+def likelihood_rating_from_days(event_days_yearly: float) -> float:
+    period_between_events = 365 / event_days_yearly
+    return 4 - 0.5*log(period_between_events)
 
 def time_function(func, *args, **kwargs):
     iters = kwargs.pop("iters", 100)
