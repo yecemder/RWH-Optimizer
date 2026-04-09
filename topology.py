@@ -187,8 +187,9 @@ def get_pipe_length(x: float, y: float, z_offset: float = 0.0, image_path: str =
     """
     topo = load_topo_map(image_path)
     z = topo.height(x, y)
-    horizontal_dist = np.sqrt(x**2 + y**2)
-    return np.sqrt(horizontal_dist**2 + (z + z_offset)**2)
+    horizontal_dist = (x**2 + y**2)**0.5
+    total_length = (horizontal_dist**2 + (z + z_offset)**2)**0.5
+    return float(total_length)
 
 TOPOLOGY_IMG_PATH = "HOUSE_TOPOLOGY.jpg"
 
