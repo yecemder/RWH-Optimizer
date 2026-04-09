@@ -38,6 +38,8 @@ HALF_ROOF_CATCHMENT_AREA = 50 # m^2
 HALF_ROOF_CATCHMENT_COST = 150 # $
 FULL_ROOF_CATCHMENT_AREA = 100 # m^2
 FULL_ROOF_CATCHMENT_COST = 350 # $
+EXTRA_CATCHMENT_FLAT_COST = 500 # $ for having any extra catchment area at all, regardless of size
+EXTRA_CATCHMENT_COST_PER_M2 = 10 # $ per m^2 of extra catchment area
 
 # Tank constants
 TANK_1_CAPACITY = 400 # liters
@@ -99,11 +101,11 @@ FILTER_FOUL_1UM_5PREV = 20_000 # 10k liters before fouled with 5um pre-filter
 
 # Chemical treatment constants
 # Chlorine
-CHLORINE_USED_PER_LITER = 10 # mg/L
+CHLORINE_MG_USED_PER_LITER = 10 # mg/L
 CHLORINE_DOSER_COST = 700 # $
 CHLORINE_CONTAINER_SIZE = 4400 # grams (4.4 kg)
 CHLORINE_CONTAINER_COST = 100 # $
-CHLORINE_CONCENTRATION = 0.08
+CHLORINE_CONCENTRATION = 0.08 # 8% concentration w/w
 CHLORINE_HEALTH_RISK = 4
 CHLORINE_ENVIRO_RISK = 3
 
@@ -240,5 +242,7 @@ POWER_CHANCES = (0.5, 0.5)  # Equal for now.
 
 SOLAR_PANEL_MODEL_CHOICES = ("HES_260", "SW_80", "HES_305P")
 SOLAR_PANEL_NUMBER_RANGE = (1, 10)
-# Batteries required to be determined by the simulator.
+
+BATTERY_NUMBER_RANGE = (1, 10) # Only applicable if power is solar. If power is diesel, must be 1.
+
 # Inverter required only if using solar power.
