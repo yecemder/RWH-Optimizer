@@ -8,7 +8,9 @@ from utils import print_design, time_function
 def random_design() -> Design:
     consumption = random.randint(*CONSUMPTION_RANGE)
     
-    nonpotable_threshold = random.randint(*NONPOTABLE_THRESHOLD_RANGE) if random.random() < NONPOTABLE_CHANCE else None
+    use_nonpotable = random.random() < NONPOTABLE_CHANCE
+    nonpotable_threshold = random.randint(*NONPOTABLE_THRESHOLD_RANGE) if use_nonpotable else None
+    nonpotable_fraction_C = random.uniform(*NONPOTABLE_PERDAY_RANGE) if use_nonpotable else None
     
     catchment = random.choices(CATCHMENT_CHOICES, CATCHMENT_CHANCES)[0]
     catchment_extra_area = random.randint(*CATCHMENT_EXTRA_AREA_RANGE) if catchment == "extra" else None
@@ -56,16 +58,20 @@ def random_design() -> Design:
         case "A":
             pump_flow_consts = [PUMP_A_a, PUMP_A_b, PUMP_A_c]
             pump_efficiency_consts = [PUMP_A_A, PUMP_A_B, PUMP_A_QMAX]
+            pump_other_consts = [PUMP_A_COST, PUMP_A_MBTF]
         case "B":
             pump_flow_consts = [PUMP_B_a, PUMP_B_b, PUMP_B_c]
             pump_efficiency_consts = [PUMP_B_A, PUMP_B_B, PUMP_B_QMAX]
+            pump_other_consts = [PUMP_B_COST, PUMP_B_MBTF]
         case "C":
             pump_flow_consts = [PUMP_C_a, PUMP_C_b, PUMP_C_c]
             pump_efficiency_consts = [PUMP_C_A, PUMP_C_B, PUMP_C_QMAX]
+            pump_other_consts = [PUMP_C_COST, PUMP_C_MBTF]
     
     return Design(
         C=consumption,
         np_threshold_L=nonpotable_threshold,
+        np_fraction_C=nonpotable_fraction_C,
         roof_choice=catchment,
         extra_catchment_area_m2=catchment_extra_area,
         extra_catchment_x=catchment_extra_x,
@@ -88,7 +94,8 @@ def random_design() -> Design:
         storage_pipe_length=storage_pipe_length,
         catchment_pipe_length=catchment_pipe_length,
         pump_flow_consts=pump_flow_consts,
-        pump_efficiency_consts=pump_efficiency_consts
+        pump_efficiency_consts=pump_efficiency_consts,
+        pump_other_consts=pump_other_consts        
     )
 
 def random_designs(n: int) -> list[Design]:

@@ -5,6 +5,7 @@ class Design:
     C: float                    # L/day
     
     np_threshold_L: float | None
+    np_fraction_C: float | None
 
     roof_choice: str
     extra_catchment_area_m2: float | None
@@ -31,9 +32,10 @@ class Design:
     panel_model: str | None     # "HES_260", "SW_80", or "HES_305P", or None if not solar
     n_panels: int | None
 
-    # Derived attributes
-    storage_z: int  # To be determined by the simulator.
+    # Derived attributes to be determined based on the design.
+    storage_z: int
     storage_pipe_length: float
     catchment_pipe_length: float | None
-    pump_flow_consts: list[float]
-    pump_efficiency_consts: list[float]
+    pump_flow_consts: list[float]  # [a, b, c] for flow rate calculation
+    pump_efficiency_consts: list[float]  # [A, B, QMAX]
+    pump_other_consts: list[int]  # [cost, MBTF]
