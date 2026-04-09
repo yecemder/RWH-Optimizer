@@ -16,7 +16,7 @@ class Design:
     storage_volume_m3: float
     storage_x: float
     storage_y: float
-    tower_height_m: float | None
+    tower_height_m: int | None
     
 
     pump: str # "A", "B", or "C"
