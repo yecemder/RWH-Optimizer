@@ -1,14 +1,15 @@
 from RWHSystem import Design
 from math import log
+from constants import *
 
 from time import perf_counter_ns as timer
 
 def print_design(design: Design):
     print(f"Consumption: {design.C} L/day")
+    print(f"Use non-potable water: {design.np_threshold_L is not None}")
     if design.np_threshold_L is not None:
-        print(f"Use non-potable water: {design.np_threshold_L is not None}")
         print(f"  Non-potable threshold: {design.np_threshold_L} L/day")
-        # print(f"  Non-potable daily fraction: {design.np_daily_frac_C:.2%}")
+        print(f"  Non-potable daily fraction: {design.np_fraction_C:.2%}")
     else:
         print(f"Does not use non-potable water")
     print(f"Roof choice: {design.roof_choice}")
@@ -53,3 +54,13 @@ def time_function(func, *args, **kwargs):
     elapsed_ms = avg_time_ns / 1_000
     print(f"Function {func.__name__} took {elapsed_ms:.3f} us")
     return result
+
+def get_pump_constants(pump_choice):
+    if pump_choice == "A":
+        return [PUMP_A_a, PUMP_A_b, PUMP_A_c], [PUMP_A_A, PUMP_A_B, PUMP_A_QMAX], [PUMP_A_COST, PUMP_A_MBTF]
+    elif pump_choice == "B":
+        return [PUMP_B_a, PUMP_B_b, PUMP_B_c], [PUMP_B_A, PUMP_B_B, PUMP_B_QMAX], [PUMP_B_COST, PUMP_B_MBTF]
+    elif pump_choice == "C":
+        return [PUMP_C_a, PUMP_C_b, PUMP_C_c], [PUMP_C_A, PUMP_C_B, PUMP_C_QMAX], [PUMP_C_COST, PUMP_C_MBTF]
+    else:
+        raise ValueError(f"Invalid pump choice: {pump_choice}")
