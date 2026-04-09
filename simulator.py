@@ -5,6 +5,10 @@ from utils import print_design, likelihood_rating_from_days
 def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data: list[float]) -> dict[str, float] | None:
     # Rainfall data in mm/day. Sunlight data in hours/day.
     # Running counters for output. 
+    
+    if len(rainfall_data) != DAYS_OF_OPERATION or len(sunlight_data) != DAYS_OF_OPERATION:
+        raise ValueError(f"Rainfall and sunlight data must be lists of length {DAYS_OF_OPERATION}. Got {len(rainfall_data)} and {len(sunlight_data)} respectively.")
+    
     cost = calculate_static_costs(solution)  # Total cost.
     days_without_water = 0 # Number of days where the system fails to meet the daily water demand.
     diesel_used_total = 0.0  # For later GHG calculations.
@@ -27,15 +31,15 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
     # Calculate system constants.
     to_storage_consts = calculate_consts_to_storage(solution)  # Check constants on the way to storage.
     if to_storage_consts is None:
+        print("System fails due to inability to pump water to storage.")
         return None  # System won't work if these values are invalid.
     
     flow_rate_up, pressure_up = to_storage_consts  # L/min and kPa respectively.
     flow_rate_down = calculate_flow_rate_to_house(solution)  # Flow rate down to the house from the tower in L/min.
     if flow_rate_down is None:
+        print("System fails due to inadequate flow rate to house.")
         return None  # System won't work if the storage height < 0.
     pump_efficiency = pump_efficiency_from_flow_rate(flow_rate_up, solution)  # Efficiency of the pump at the given flow rate.
-    
-    cost = calculate_static_costs(solution)
     
     volume_in_storage_m3 = 0.0  # Current volume in storage tank in m^3.
     volume_in_catchment_m3 = 0.0  # Current volume in catchment tank in m^3.
@@ -67,9 +71,7 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
             case _:
                 raise ValueError(f"Solar panel model {solution.panel_model} not recognized for efficiency calculation.")
         panel_const = SOLAR_INTENSITY * panel_area * (solution.n_panels or 0) * panel_effiency # W
-        panel_const *= 86400 / 1e6 # Convert W to MJ/day
-        sunlight_energy_daily = [sunlight_data[i] * panel_const for i in range(len(sunlight_data))]
-    is_diesel = solution.power == "diesel"
+        sunlight_energy_daily = [panel_const * sunlight_data[i] * 3600 / 1e6 for i in range(len(sunlight_data))]  # Convert W to MJ for daily energy from solar panels.
     
     max_battery_energy = solution.n_batteries * BATTERY_ENERGY_STORAGE  # Max energy that can be stored in batteries in MJ.
     energy_in_batteries = 0.0
@@ -93,17 +95,15 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
             else:
                 filter_mbtf[i] = FILTER_FOUL_1UM_NOPREV
     
-    filter_enum = enumerate(solution.filters)
+    # filter_enum = enumerate(solution.filters)
     
     chlorine_per_liter = CHLORINE_MG_USED_PER_LITER / (1000 * CHLORINE_CONCENTRATION)  # grams of chlorine per liter, including concentration
-    diesel_energy_per_liter = DIESEL_ENERGY_CONTENT / GENERATOR_EFFICIENCY  # MJ of energy provided by 1 liter of diesel, accounting for generator efficiency.
     
     water_consumed_total = 0.0  # Total water consumed over the simulation period in liters.
     
     # ----------------------------------------------------
-    for day in range(len(rainfall_data)):
+    for day in range(DAYS_OF_OPERATION):
         day_is_lost = False  # Whether the day is lost due to lack of water.
-        maintenace_operations = 0
         # Store energy into batteries from solar panels.
         # Immediately use energy for 24-hour UV lamp if not within first few days of non-consumption. 
         if is_solar:
@@ -118,15 +118,13 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
                 day_is_lost = True
         
         volume_in_catchment_m3 = min(volume_in_catchment_m3 + q_in[day] / 1000, solution.catchment_tank_L / 1000)  # Convert L to m^3 for volume calculations.
-        water_to_pump = min(solution.storage_volume_m3 - volume_in_storage_m3, volume_in_catchment_m3)
-        elec_energy_to_pump_MJ = water_to_pump * pressure_up / (pump_efficiency * 1e6)  # Energy needed to pump the water up to the tower in MJ.
-        elec_energy_ozone = 0.0
+        water_to_pump = volume_in_catchment_m3  # Pump tries to move all available catchment water; storage overflow is handled downstream.
+        elec_energy_to_pump_MJ = water_to_pump * pressure_up / (pump_efficiency * 1e3)  # Energy needed to pump the water up to the tower in MJ. (pressure in kPa)
         
-        # If using ozone, calculate energy used to generate sufficient ozone.
+        elec_energy_ozone = 0.0
+        # If using ozone, calculate energy used to generate sufficient ozone for water being pumped.
         if solution.chem == "ozone":
-            elec_energy_ozone = volume_in_catchment_m3 * OZONE_DOSER_ENERGY_CONSUMPTION / 1e6  # Energy needed for ozone disinfection in MJ.
-            if is_solar:
-                elec_energy_ozone /= INVERTER_EFFICIENCY  # Losses from inverter when using solar for ozone disinfection.
+            elec_energy_ozone = water_to_pump * OZONE_DOSER_ENERGY_CONSUMPTION / 1e6  # Energy needed for ozone disinfection in MJ.
         elec_energy_to_pump_MJ += elec_energy_ozone
         
         if is_solar:
@@ -146,8 +144,8 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
         else:   # Diesel can meet any needs, but if there's not enough diesel left,
                 # then refuel.
             diesel_energy_needed_MJ = elec_energy_to_pump_MJ / GENERATOR_EFFICIENCY
-            diesel_needed_L = diesel_energy_needed_MJ / diesel_energy_per_liter
-            generator_runtime_today = diesel_needed_L * GENERATOR_WATTAGE * 3600 / (GENERATOR_EFFICIENCY * DIESEL_ENERGY_CONTENT * 1e6)
+            diesel_needed_L = diesel_energy_needed_MJ / DIESEL_ENERGY_CONTENT
+            generator_runtime_today = elec_energy_to_pump_MJ * 1e6 / (GENERATOR_WATTAGE * 3600)
             if generator_runtime_today + generator_runtime >= GENERATOR_OIL_CHANGE_INTERVAL:
                 maintenance_operations += 1
                 cost += GENERATOR_OIL_CHANGE_COST
@@ -160,24 +158,28 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
                 diesel_used_total += diesel_needed_L
             else:
                 # Otherwise, refuel and then use diesel.
+                if (diesel_needed_L - diesel_level) > GENERATOR_DIESEL_CAPACITY:
+                    print("System fails due to inability to pump water to storage from insufficient diesel capacity.")
+                    return None  # System won't work if we can't store enough diesel to meet pumping needs.
                 diesel_maintenances += 1
-                maintenace_operations += 1
+                maintenance_operations += 1
                 cost += DIESEL_COST_PER_REFUEL
                 diesel_level = GENERATOR_DIESEL_CAPACITY - diesel_needed_L
                 diesel_used_total += diesel_needed_L
-                cost += DIESEL_COST_PER_REFUEL
             volume_pumped_m3 = water_to_pump  # Assume we can pump the entire catchment tank; we should always have enough energy.
         
         # Pump volume to storage, allowing overflow of storage.
-        volume_in_storage_m3 = min(volume_in_storage_m3 + volume_pumped_m3, solution.storage_volume_m3)
+        volume_in_storage_m3 = min(volume_in_storage_m3 + volume_pumped_m3, solution.storage_volume_m3) # Can only add up to storage capacity; excess is overflow and lost.
         volume_in_catchment_m3 -= volume_pumped_m3
         
         hours_to_pump = volume_pumped_m3 * 1000 / (flow_rate_up * 60)  # L pumped divided by L/min converted to min, then to hours.
         if hours_spent_pumping + hours_to_pump >= solution.pump_other_consts[1]:  # MBTF in hours
             # Replace pump if MBTF reached.
-            maintenace_operations += 1
+            maintenance_operations += 1
             cost += solution.pump_other_consts[0]  # Pump cost
             hours_spent_pumping = hours_to_pump
+        else:
+            hours_spent_pumping += hours_to_pump
         
         if solution.chem == "chlorine":
             chlorine_needed = volume_pumped_m3 * 1000 * chlorine_per_liter  # Total grams of chlorine needed for the pumped volume.
@@ -187,7 +189,7 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
                 # Not enough chlorine to treat the pumped water, so refill the chlorine doser
                 # and add to maintenances and trackers.
                 chlorine_maintenances += 1
-                maintenace_operations += 1
+                maintenance_operations += 1
                 cost += CHLORINE_CONTAINER_COST
                 chlorine_level = CHLORINE_CONTAINER_SIZE - chlorine_needed
         
@@ -199,21 +201,24 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
         if consumption < solution.C:
             day_is_lost = True
         volume_in_storage_m3 = max(0.0, volume_in_storage_m3 - consumption / 1000)  # Convert L to m^3 for volume calculations.
-        consumption = True
+        water_consumed_total += consumption
         # Non potable water calculations.
-        if solution.np_threshold_L is not None and volume_in_storage_m3 > solution.np_threshold_L:
+        if solution.np_threshold_L is not None and volume_in_storage_m3 * 1000 > solution.np_threshold_L:
             # Treat non-potable water use as reserve-floor
-            available_for_np = max(0, solution.storage_volume_m3 * 1000 - solution.np_threshold_L)  # L
-            nonpotable_use = min(solution.C * (solution.np_fraction_C or 0.0), available_for_np)
-            volume_in_storage_m3 -= nonpotable_use
-            nonpotable_used_total += nonpotable_use
+            available_for_np_L = max(0, volume_in_storage_m3 * 1000 - solution.np_threshold_L)  # L
+            nonpotable_use_L = min(solution.C * (solution.np_fraction_C or 0.0), available_for_np_L)
+            volume_in_storage_m3 -= nonpotable_use_L / 1000  # Convert L to m^3 for volume calculations.
+            nonpotable_used_total += nonpotable_use_L
+            water_consumed_total += nonpotable_use_L  # Non-potable water still counts towards total water consumed.
         
         # Filter calculations
         filter_replacement_maintenance = False  # Filters can be replaced a single operation on a single day, even if multiple filters need replacement.
         if solution.filter_location == "to storage":
             filter_use_today = volume_pumped_m3 * 1000  # Convert m^3 to L for filter usage tracking.
-            for i, f in filter_enum:
+            for i, f in enumerate(solution.filters):
+                print(f"Filter {f} usage today: {filter_use_today} L. Total usage: {filter_usage[i]} L. MBTF: {filter_mbtf[i]} L.")
                 if filter_use_today + filter_usage[i] >= filter_mbtf[i]:
+                    print("Replaced a filter")
                     filter_replacement_maintenance = True
                     # Reset usage after replacement.
                     filter_usage[i] = filter_use_today
@@ -228,8 +233,10 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
                     filter_usage[i] += filter_use_today
         elif solution.filter_location == "to house":
             filter_use_today = consumption  # L. Non-potable skips any filters on the way back.
-            for i, f in filter_enum:
+            for i, f in enumerate(solution.filters):
+                print(f"Filter {f} usage today: {filter_use_today} L. Total usage: {filter_usage[i]} L. MBTF: {filter_mbtf[i]} L.")
                 if filter_use_today + filter_usage[i] >= filter_mbtf[i]:
+                    print("Replaced a filter")
                     filter_replacement_maintenance = True
                     # Reset usage after replacement.
                     filter_usage[i] = filter_use_today
@@ -244,7 +251,7 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
                     filter_usage[i] += filter_use_today
         
         if filter_replacement_maintenance:
-            maintenace_operations += 1
+            maintenance_operations += 1
         
         if day_is_lost:
             days_without_water += 1
@@ -256,24 +263,35 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
     reliability = (DAYS_OF_OPERATION - days_without_water) / YEARS_OF_OPERATION  # Average number of days per year water is properly supplied
     risk_exposure = calculate_risk_exposure(diesel_maintenances, chlorine_maintenances)
     relative_ghg = calculate_relative_ghg_emissions(solution, diesel_used_total, water_consumed_total)
-    # maintenance_operations
+    maintenance_operations /= YEARS_OF_OPERATION  # Average number of maintenance operations per year.
     non_potable_avg = nonpotable_used_total / (DAYS_OF_OPERATION * solution.C) if solution.C != 0 else 0.0
     on_demand_flow_rate = flow_rate_down  # L/min, which is the flow rate available to the house when water is being supplied.
     
+    print("--- All variable tallies ---")
+    print(f"Total cost: ${cost:.2f}")
+    print(f"Relative cost (compared to all-water-shipped): {relative_cost:.2f}")
+    print(f"Reliability (days with water supplied): {reliability}")
+    print(f"Risk exposure score: {risk_exposure:.2f}")
+    print(f"Relative GHG emissions (compared to all-water-shipped): {relative_ghg:.2f}")
+    print(f"Average maintenance operations per year: {maintenance_operations:.2f}")
+    print(f"Average non-potable water fraction of consumption: {non_potable_avg:.2%}")
+    print(f"On-demand flow rate to house: {on_demand_flow_rate:.2f} L/min")
+    
+
     return {
         "consumption": solution.C,
         "relative_cost": relative_cost,
         "reliability": reliability,
         "risk_exposure": risk_exposure,
         "relative_ghg": relative_ghg,
-        "maintenance_operations": maintenace_operations,
+        "maintenance_operations": maintenance_operations,
         "non_potable_avg": non_potable_avg,
         "on_demand_flow_rate": on_demand_flow_rate
     }
 
 
 def calculate_consts_to_storage(solution: Design) -> tuple[float, float] | None:
-    # Flow rate up to the tower from the catchment tank in L/s.
+    # Flow rate up to the tower from the catchment tank in L/min.
     filter_consts = 0
     if solution.filter_location == "to storage":
         for f in solution.filters:
@@ -298,7 +316,7 @@ def calculate_consts_to_storage(solution: Design) -> tuple[float, float] | None:
         - solution.pump_flow_consts[1]
     )
     Y = (
-        DENSITY * GRAVITY * (solution.storage_z + WATER_HEIGHT_PUMPING)
+        DENSITY * GRAVITY * (solution.storage_z + WATER_HEIGHT_PUMPING + (solution.tower_height_m or 0))
         / (1000)
         - solution.pump_flow_consts[2]
     )
@@ -330,7 +348,7 @@ def calculate_flow_rate_to_house(solution: Design):
             filter_consts += FILTER_1UM_CF
     cf_total = filter_consts * CF_EXP
     
-    if (solution.storage_z + WATER_HEIGHT_SUPPLYING) <= 0:
+    if (solution.storage_z + WATER_HEIGHT_SUPPLYING + (solution.tower_height_m or 0)) <= 0:
         # If the storage tank is at or below the height of the house,
         # the configuration is invalid; no flow will occur to the house. In this case,
         # return None to indicate failure.
@@ -347,7 +365,7 @@ def calculate_flow_rate_to_house(solution: Design):
         / (PUMP_CONV_G * pi * PIPE_DIAMETER**2)
     )
     Y = (
-        -DENSITY * GRAVITY * (solution.storage_z + WATER_HEIGHT_SUPPLYING)
+        -DENSITY * GRAVITY * (solution.storage_z + WATER_HEIGHT_SUPPLYING + (solution.tower_height_m or 0))
     )
     
     discriminant = X**2 - 4*W*Y
@@ -466,7 +484,7 @@ def calculate_static_costs(solution: Design):
         cost += INVERTER_COST
     elif solution.power == "diesel":
         cost += GENERATOR_COST + DIESEL_COST_PER_REFUEL
-    
+    print(f"Static costs for design: ${cost:.2f}")
     return cost
 
 def calculate_relative_ghg_emissions(solution: Design, diesel_used_L: float, water_consumed_L: float):
