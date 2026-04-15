@@ -91,9 +91,9 @@ FILTER_1UM_INITIAL_COST = 125
 FILTER_1UM_REPLACEMENT_COST = 75
 FILTER_1UM_CF = 0.167
 
-FILTER_FOUL_200UM_NOPREV = 25_000 # 5k liters before fouled without pre-filters
+FILTER_FOUL_200UM_NOPREV = 25_000 # 25k liters before fouled without pre-filters
 FILTER_FOUL_5UM_NOPREV = 10_000 # 10k liters before fouled without pre-filters
-FILTER_FOUL_1UM_NOPREV = 5_000 # 25k liters before fouled without pre-filters
+FILTER_FOUL_1UM_NOPREV = 5_000 # 5k liters before fouled without pre-filters
 
 FILTER_FOUL_5UM_200PREV = 20_000 # 20k liters before fouled with 200um pre-filter
 FILTER_FOUL_1UM_200PREV = 15_000 # 15k liters before fouled with 200um pre-filter
@@ -111,7 +111,7 @@ CHLORINE_HEALTH_RISK = 4
 CHLORINE_ENVIRO_RISK = 3
 
 # Ozone
-OZONE_USED_PER_LITER = 5 # mg/L
+OZONE_MG_PER_LITER = 5 # mg/L
 OZONE_DOSER_COST = 4000 # $
 OZONE_DOSER_ENERGY_CONSUMPTION = 2 # MJ / gram of ozone produced
 

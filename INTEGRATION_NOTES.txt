@@ -1,0 +1,25 @@
+
+These files are written against the current public repo layout:
+
+- environment.py: drop-in replacement with a rainfall generator fitted to example_rainfall_mm.txt
+- optimizer.py: drop-in replacement that preserves random_design(), adds parallel search,
+  scores via satisfaction_curve.py, and writes best_runtime.json + best_editable.json
+- best_state.py: new helper for serializing/deserializing Design and re-deriving geometry/pump fields
+- manual_test.py: new CLI for quickly re-simulating the editable best design with overrides
+
+Suggested copy targets inside the repo:
+- replace environment.py with environment.py from this folder
+- replace optimizer.py with optimizer.py from this folder
+- add best_state.py
+- add manual_test.py
+- copy example_rainfall_mm.txt into the repo root if it is not already there
+
+Important:
+- best_runtime.json stores the full winning record.
+- best_editable.json stores only the human-edited design inputs.
+- When best_editable.json is read back in, the derived fields are rebuilt automatically.
+  That means you can safely change things like storage_x, storage_y, tower_height_m, or pump.
+
+Typical usage:
+    python optimizer.py search --designs 50000 --batch-size 256 --weather-trials 3 --seed 42
+    python manual_test.py --design best_editable.json --set C=420 --set n_panels=8

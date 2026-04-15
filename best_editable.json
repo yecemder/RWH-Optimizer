@@ -1,0 +1,27 @@
+{
+  "C": 610,
+  "catchment_tank_L": 10000,
+  "chem": "ozone",
+  "extra_catchment_area_m2": 169,
+  "extra_catchment_x": 77,
+  "extra_catchment_y": 72,
+  "filter_location": "to house",
+  "filters": [
+    "5um",
+    "200um",
+    "1um"
+  ],
+  "n_batteries": 5,
+  "n_panels": 5,
+  "np_fraction_C": 0.27161777768028683,
+  "np_threshold_L": 210,
+  "panel_model": "HES_260",
+  "power": "solar",
+  "pump": "C",
+  "roof_choice": "extra",
+  "storage_volume_m3": 48,
+  "storage_x": 86,
+  "storage_y": 50,
+  "tower_height_m": null,
+  "uv": "36W"
+}

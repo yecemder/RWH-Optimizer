@@ -79,9 +79,9 @@ HEALTH_RISK = Satisfaction(
 
 GHG_EMISSIONS = Satisfaction(
     GHG_EMISSIONS_WEIGHT,
-    15,
+    0.15,
     False,
-    110,
+    1.10,
     True,
     False
 )
@@ -108,7 +108,7 @@ ON_DEMAND_FLOW = Satisfaction(
     ON_DEMAND_FLOW_WEIGHT,
     18,
     True,
-    100,
+    40,
     False,
     True
 )

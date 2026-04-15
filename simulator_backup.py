@@ -102,6 +102,16 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
         day_is_lost = False  # Whether the day is lost due to lack of water.
         # Store energy into batteries from solar panels.
         # Immediately use energy for 24-hour UV lamp if not within first few days of non-consumption. 
+        if is_solar:
+            energy_in_batteries = min(energy_in_batteries + sunlight_energy_daily[day] * BATTERY_EFFICIENCY, max_battery_energy)
+            if not(day < DAYS_WITH_NO_CONSUMPTION) and (energy_in_batteries >= uv_power * 24 * 3600 / 1e6): # Convert W to MJ
+                energy_in_batteries -= uv_power * 24 * 3600 / 1e6
+            elif day < DAYS_WITH_NO_CONSUMPTION:
+                # During the first few days of non-consumption, do not use energy for UV lamp.
+                pass
+            else:
+                # Not enough energy to power UV lamp for the day, so water quality is not maintained, and system fails for the day.
+                day_is_lost = True
         
         volume_in_catchment_m3 = min(volume_in_catchment_m3 + q_in[day] / 1000, solution.catchment_tank_L / 1000)  # Convert L to m^3 for volume calculations.
         water_to_pump_m3 = volume_in_catchment_m3  # Pump tries to move all available catchment water; storage overflow is handled downstream.
@@ -113,27 +123,9 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
             elec_energy_ozone = water_to_pump_m3 * OZONE_DOSER_ENERGY_CONSUMPTION * OZONE_MG_PER_LITER  # Energy needed for ozone disinfection in MJ.
         elec_energy_to_pump_MJ += elec_energy_ozone
         
-        # Daily UV energy requirement (MJ).
-        uv_energy_daily_MJ = 0.0
-        if not (day < DAYS_WITH_NO_CONSUMPTION):
-            uv_energy_daily_MJ = uv_power * 24 * 3600 / 1e6  # Convert W to MJ/day
-
         if is_solar:
-            # Store energy into batteries from solar panels.
-            energy_in_batteries = min(energy_in_batteries + sunlight_energy_daily[day], max_battery_energy)
-
-            # Immediately use energy for 24-hour UV lamp if not within first few days of non-consumption.
-            if uv_energy_daily_MJ > 0:
-                if energy_in_batteries >= uv_energy_daily_MJ:
-                    energy_in_batteries -= uv_energy_daily_MJ
-                else:
-                    # Not enough energy to power UV lamp for the day,
-                    # so water quality is not maintained, and system fails for the day.
-                    day_is_lost = True
-
             energy_from_batteries_to_pump = elec_energy_to_pump_MJ / BATTERY_EFFICIENCY  # Losses from coming out of battery
             energy_from_batteries_to_pump /= INVERTER_EFFICIENCY  # Losses from inverter when using solar
-
             if energy_in_batteries >= energy_from_batteries_to_pump:
                 volume_pumped_m3 = water_to_pump_m3  # Assume we can pump the entire catchment tank if we have enough energy.
                 energy_in_batteries -= energy_from_batteries_to_pump
@@ -144,42 +136,32 @@ def simulate_design(solution: Design, rainfall_data: list[float], sunlight_data:
                 if energy_from_batteries_to_pump > 0:
                     fraction_transferable = energy_in_batteries / energy_from_batteries_to_pump
                     volume_pumped_m3 = water_to_pump_m3 * max(0.0, min(1.0, fraction_transferable))
-                energy_in_batteries = 0.0
-
-        else:
-            # Diesel system can meet any electrical needs, including the UV lamp.
-            # Refuelling behaviour is intentionally sloppy:
-            # if we would run out today, we "buy a shipment" at the start of the day,
-            # use what we need, and discard any leftover from that shipment.
-
-            total_elec_energy_today_MJ = elec_energy_to_pump_MJ + uv_energy_daily_MJ
-            diesel_energy_needed_MJ = total_elec_energy_today_MJ / GENERATOR_EFFICIENCY
+                energy_in_batteries = 0
+        else:   # Diesel can meet any needs, but if there's not enough diesel left,
+                # then refuel.
+            diesel_energy_needed_MJ = elec_energy_to_pump_MJ / GENERATOR_EFFICIENCY
             diesel_needed_L = diesel_energy_needed_MJ / DIESEL_ENERGY_CONTENT
-            generator_runtime_today = total_elec_energy_today_MJ * 1e6 / (GENERATOR_WATTAGE * 3600)
-
+            generator_runtime_today = elec_energy_to_pump_MJ * 1e6 / (GENERATOR_WATTAGE * 3600)
             if generator_runtime_today + generator_runtime >= GENERATOR_OIL_CHANGE_INTERVAL:
                 maintenance_operations += 1
                 cost += GENERATOR_OIL_CHANGE_COST
                 generator_runtime = generator_runtime_today
             else:
                 generator_runtime += generator_runtime_today
-
-            # If we have enough diesel already in the generator, use it.
+            # If we have enough diesel in the generator, use it.
             if diesel_needed_L <= diesel_level:
                 diesel_level -= diesel_needed_L
                 diesel_used_total += diesel_needed_L
             else:
-                # Otherwise, buy one new shipment and use today's required amount from it,
-                # discarding any leftover from the shipment.
-                if diesel_needed_L > GENERATOR_DIESEL_CAPACITY:
-                    return None  # System won't work if a single day's needs exceed one shipment/capacity.
+                # Otherwise, refuel and then use diesel.
+                if (diesel_needed_L - diesel_level) > GENERATOR_DIESEL_CAPACITY:
+                    return None  # System won't work if we can't store enough diesel to meet pumping needs.
                 diesel_maintenances += 1
                 maintenance_operations += 1
                 cost += DIESEL_COST_PER_REFUEL
                 diesel_level = GENERATOR_DIESEL_CAPACITY - diesel_needed_L
                 diesel_used_total += diesel_needed_L
-
-            volume_pumped_m3 = water_to_pump_m3  # Assume we can pump the entire catchment tank.
+            volume_pumped_m3 = water_to_pump_m3  # Assume we can pump the entire catchment tank; we should always have enough energy.
         
         # Pump volume to storage, allowing overflow of storage.
         volume_in_storage_m3 = min(volume_in_storage_m3 + volume_pumped_m3, solution.storage_volume_m3) # Can only add up to storage capacity; excess is overflow and lost.
@@ -332,7 +314,6 @@ def calculate_consts_to_storage(solution: Design) -> tuple[float, float] | None:
     if P <= 0 or Q <= 0:
         # If pressure or flow rate is negative, that means the pump can't push hard enough to overcome the system's resistance, so return None to indicate failure.
         return None
-    print(Q,P)
     return Q, P
 
 def calculate_flow_rate_to_house(solution: Design):

@@ -7,7 +7,7 @@ class Design:
     np_threshold_L: float | None
     np_fraction_C: float | None
 
-    roof_choice: str
+    roof_choice: str  # "half", "full", or "extra"
     extra_catchment_area_m2: float | None
     extra_catchment_x: float | None
     extra_catchment_y: float | None
